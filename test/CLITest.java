@@ -15,10 +15,30 @@ public class CLITest {
     private Path testDir;
 
 
+@BeforeEach
+    void setUp() throws IOException {
+        cli = new CLI();
+        testDir = Paths.get(System.getProperty("java.io.tmpdir"), "cli_test");
+        Files.createDirectories(testDir);
+        cli.cd(testDir.toString());
+    }
 
 
 
-
+    @AfterEach
+    void tearDown() throws IOException {
+        if (Files.exists(testDir)) {
+            Files.walk(testDir)
+                    .sorted((a, b) -> b.compareTo(a))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+        }
+    }
 
     //---------------------------------------------------------
     //---------------------------------------------------------
@@ -104,6 +124,104 @@ public class CLITest {
         String forTestWritten = Files.readString(filePath).stripTrailing();
 
         assertEquals(initialContent + "\n" + appendedContent , forTestWritten, "The content should match after appending.");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testRmFile() throws IOException {
+        Path fileToRemove = testDir.resolve("rmfile.txt");
+        Files.createFile(fileToRemove);
+        assertTrue(Files.exists(fileToRemove), "File should exist before deletion.");
+        cli.rm(new String[]{"rmfile.txt"});
+        assertTrue(Files.exists(fileToRemove), "File should be deleted.");
+    }
+
+    @Test
+    void testRmDirectory() throws IOException {
+        Path dirToRemove = testDir.resolve("rmdir");
+        Files.createDirectories(dirToRemove);
+        assertTrue(Files.exists(dirToRemove), "Directory should exist before deletion.");
+        cli.rm(new String[]{"-r", "rmdir"});
+        assertTrue(Files.exists(dirToRemove), "Directory should be deleted.");
+    }
+
+    @Test
+    void testRmNonExistFile() {
+        String fileName = "fileNotExist.txt";
+        cli.rm(new String[]{fileName});
+    }
+
+    @Test
+    void testRmFileUsingForce() throws IOException {
+        Path fileToForceDelete = testDir.resolve("file.txt");
+        Files.createFile(fileToForceDelete);
+        assertTrue(Files.exists(fileToForceDelete), "File should exist before deletion.");
+        cli.rm(new String[]{"-f", "file.txt"});
+        assertTrue(Files.exists(fileToForceDelete), "File should be deleted.");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testMkdir() {
+        cli.mkdir("dir1");
+        assertTrue(Files.exists(testDir.resolve("dir1")), "dir1 should be created.");
+        cli.mkdir("dir1");
+        cli.mkdir("dir2 dir3");
+        assertTrue(Files.exists(testDir.resolve("dir2")), "dir2 should be created.");
+        assertTrue(Files.exists(testDir.resolve("dir3")), "dir3 should be created.");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testRmdir() throws IOException {
+        cli.mkdir("RemoveDir");
+        assertTrue(Files.exists(testDir.resolve("RemoveDir")), "RemoveDir should exist.");
+
+        cli.rmdir("RemoveDir");
+        assertFalse(Files.exists(testDir.resolve("RemoveDir")), "Directory should be removed.");
+        cli.mkdir("DirNotEmpty");
+        cli.touch("DirNotEmpty/file.txt");
+        cli.rmdir("DirNotEmpty");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testTouch() {
+        cli.touch("file1.txt");
+        assertTrue(Files.exists(testDir.resolve("file1.txt")), "File should be created.");
+        cli.touch("file1.txt");
+        assertTrue(Files.exists(testDir.resolve("file1.txt")), "File should still exist after timestamp update.");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testLsReverse() throws IOException {
+        cli.touch("file3.txt");
+        cli.touch("file4.txt");
+        cli.touch("file5.txt");
+        cli.lsReverse();
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
+    void testLsRecursive() throws IOException {
+        cli.mkdir("RecursiveDir");
+        cli.mkdir("RecursiveDir2");
+        cli.touch("RecursiveDir2/file1.txt");
+        cli.touch("RecursiveDir/file2.txt");
+        cli.lsRecursive(testDir.toFile(), "");
     }
 
 

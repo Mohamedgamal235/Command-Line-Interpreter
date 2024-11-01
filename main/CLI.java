@@ -121,6 +121,124 @@ public class CLI {
     // Marwa
 
 
+    public void mkdir(String dirNames){
+        String[] dirs = dirNames.split(" ");
+        for (String dirname : dirs){
+            dirname = dirname.trim();
+            if (!dirname.isEmpty()){
+                Path newDir = currDir.resolve(dirname);
+                try {
+                    if (Files.exists(newDir)){
+                        System.out.println("Error: Directory already exists: " + dirname);
+                    } else{
+                        Files.createDirectories(newDir);
+                        System.out.println("Directory created: " + dirname);
+                    }
+                } catch (IOException e){
+                    System.out.println("Error: Could not create directory: " + dirname + ". " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void rmdir(String dirNames) {
+        String[] dirs = dirNames.split(" ");
+        for (String dirname : dirs) {
+            dirname = dirname.trim();
+            if (!dirname.isEmpty()){
+                Path dir = currDir.resolve(dirname);
+                try {
+                    if (Files.exists(dir) && Files.isDirectory(dir)) {
+                        if (Files.list(dir).findAny().isPresent()) {
+                            System.out.println("Error: Directory not empty: " + dirname);
+                        } else {
+                            Files.delete(dir);
+                            System.out.println("Directory removed: " + dirname);
+                        }
+                    } else {
+                        System.out.println("Error: Directory does not exist: " + dirname);
+                    }
+                } catch (IOException e) {
+                    System.out.println("Error: Could not delete directory: " + dirname + ". " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void touch(String fileNames){
+        String[] files=fileNames.split(" ");
+        for(String fileName : files){
+            fileName = fileName.trim();
+            if (!fileName.isEmpty()){
+                File file = new File(currDir.toString(), fileName);
+                try {
+                    if (file.exists()) {
+                        boolean success = file.setLastModified(System.currentTimeMillis());
+                        if (success) {
+                            System.out.println("Timestamp updated successfully for: " +fileName);
+                        } else {
+                            System.out.println("Error: Could not update Timestamp for: " +fileName);
+                        }
+                    } else {
+                        if (file.createNewFile()) {
+                            System.out.println("File created: " + fileName );
+                        } else {
+                            System.out.println("Error: File could not be created: " +fileName);
+                        }
+                    }
+                } catch (IOException e) {
+                    System.out.println("I/O Error: There was an issue creating or updating the file: " +fileName);
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void lsRecursive(File dir, String indent){
+        String[] files = dir.list();
+        if (files != null){
+            for (String file : files){
+                File currentFile = new File(dir, file);
+                System.out.println(indent + file);
+                if(currentFile.isDirectory()){
+                    lsRecursive(currentFile, indent + "    ");
+                }
+            }
+        } else {
+            System.out.println("Error: Unable to list files.");
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void lsReverse() {
+        ArrayList<String> files = new ArrayList<>();
+        if (Files.isDirectory(currDir)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(currDir)) {
+                for (Path file : stream) {
+                    files.add(file.getFileName().toString());
+                }
+                Collections.sort(files, Collections.reverseOrder());
+                for (String file : files) {
+                    System.out.println(file);
+                }
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        else {
+            System.out.println("Current path not a directory");
+        }
+    }
     // -----------------------------------------------
     // -----------------------------------------------
 
