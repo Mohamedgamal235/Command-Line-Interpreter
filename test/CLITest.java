@@ -43,6 +43,14 @@ public class CLITest {
     //---------------------------------------------------------
 
     @Test
+    void pwdTest() {
+        String currDir = cli.pwd();
+        assertEquals(testDir.toString(), currDir , "pwd should return the current directory.");
+    }    
+//---------------------------------------------------------
+    //---------------------------------------------------------
+
+    @Test
     void testCdValidDirectory() { // cd Ayaa
         cli.mkdir("Ayaa");
         cli.cd("Ayaa");
