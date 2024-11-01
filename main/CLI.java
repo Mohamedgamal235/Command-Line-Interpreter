@@ -112,6 +112,49 @@ public class CLI {
     // --------------------------------------------------------------------------
 
     // Ayaa
+public String pwd() {
+	return currDir.toString();
+}
+
+// -----------------------------------------------
+// -----------------------------------------------
+
+public void cd(String path) {
+	path = path.trim();
+	if (path.equals("..")) {
+		currDir = currDir.getParent();
+		if (currDir == null)
+			currDir = Paths.get(System.getProperty("user.dir"));
+	}
+	else {
+		Path newDir = currDir.resolve(path);
+		if (Files.exists(newDir) && Files.isDirectory(newDir))
+			currDir = newDir;
+		else
+			System.out.println("Invalid Path");
+	}
+}
+// -----------------------------------------------
+	// -----------------------------------------------
+
+public void help() {
+	System.out.println("cd          : Displays the name of or changes the current directory.");
+	System.out.println("pwd         : Prints the working directory");
+	System.out.println("ls          : Lists the contents (files & directories) of the current directory sorted alphabetically.");
+	System.out.println("ls -r       : Print Lists the contents (files & directories) on reverse order.");
+	System.out.println("ls -a       : display all contents even entries starting with (a).");
+	System.out.println("mkdir       : Creates a directory with each given name.");
+	System.out.println("rmdir       : Removes each given directory (only if it is empty).");
+	System.out.println("touch       : Creates a file with each given name.");
+	System.out.println("mv          : Moves one or more files/directories to a directory.");
+	System.out.println("rm          : Removes one or more files/directories from the current directory.");
+	System.out.println("cat         : Concatenates the content of files and prints it.");
+	System.out.println(">           : Redirects the output of the first command to be written to a file.");
+	System.out.println(">>          : Like > but appends to file if it exists.");
+	System.out.println("|           : Pipes | redirect the output of the previous command as in input to another command.");
+}
+
+}
 
 
 
