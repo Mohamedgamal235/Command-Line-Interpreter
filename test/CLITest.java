@@ -39,7 +39,28 @@ public class CLITest {
                     });
         }
     }
+//---------------------------------------------------------
+    //---------------------------------------------------------
 
+    @Test
+    void testCdValidDirectory() { // cd Ayaa
+        cli.mkdir("Ayaa");
+        cli.cd("Ayaa");
+        assertEquals(testDir.resolve("Ayaa").toString(), cli.pwd(), "Should change to testDir.");
+    }
+
+    @Test
+    void testCdParentDirectory(){ // cd ..
+        cli.mkdir("parent");
+        cli.cd("parent");
+        cli.mkdir("child");
+        cli.cd("child");
+        cli.cd("..");
+        assertEquals(testDir.resolve("parent").toString(), cli.pwd(), "Should change to testDir.");
+    }
+
+    //---------------------------------------------------------
+    //---------------------------------------------------------
     //---------------------------------------------------------
     //---------------------------------------------------------
 
