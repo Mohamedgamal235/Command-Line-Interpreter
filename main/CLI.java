@@ -46,11 +46,12 @@ public class CLI {
             else if (command.equalsIgnoreCase("help")){
                 help();
             }
-            else if (command.equalsIgnoreCase("ls")){
-                if (parts.length > 1 && argument.equals("-r"))
+             else if (command.equals("ls")){
+                if (parts.length > 1 && argument.equals("-R"))
                     lsRecursive(currDir.toFile(), "");
-                else if (parts.length>1 && "-R".equals(parts[1]))
-                    lsReverse();
+                else if (parts.length > 1 && "-r".equals(parts[1])) {
+                    System.out.println(String.join("\n", lsReverse()));
+                }
                 else if (parts.length == 1){
                     ArrayList<String> files = ls();
                     System.out.println(String.join("\n" , files));
@@ -263,24 +264,22 @@ public void help() {
     // -----------------------------------------------
     // -----------------------------------------------
 
-    public void lsReverse() {
-        ArrayList<String> files = new ArrayList<>();
+
+    public List<String> lsReverse() {
+        List<String> files = new ArrayList<>();
         if (Files.isDirectory(currDir)) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(currDir)) {
                 for (Path file : stream) {
                     files.add(file.getFileName().toString());
                 }
-                Collections.sort(files, Collections.reverseOrder());
-                for (String file : files) {
-                    System.out.println(file);
-                }
+                files.sort(Collections.reverseOrder());
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
-        }
-        else {
+        } else {
             System.out.println("Current path not a directory");
         }
+        return files;
     }
     // -----------------------------------------------
     // -----------------------------------------------
