@@ -3,10 +3,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.AssignemntOS.CLI;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
 
@@ -40,7 +43,7 @@ public class CLITest {
                     });
         }
     }
-//---------------------------------------------------------
+    //---------------------------------------------------------
     //---------------------------------------------------------
 
     @Test
@@ -48,7 +51,7 @@ public class CLITest {
         String currDir = cli.pwd();
         assertEquals(testDir.toString(), currDir , "pwd should return the current directory.");
     }
-//---------------------------------------------------------
+    //---------------------------------------------------------
     //---------------------------------------------------------
 
     @Test
@@ -70,6 +73,121 @@ public class CLITest {
 
     //---------------------------------------------------------
     //---------------------------------------------------------
+
+    @Test
+    void testLsPipeCat() throws IOException { // ls | cat
+        cli.touch("file1.txt");
+        cli.touch("file2.txt");
+
+        String input = "ls | cat" ;
+
+        String[] cmds = new String[2];
+        cmds[0] = input.substring(0,input.indexOf("|")).trim() ;
+        cmds[1] = input.substring(input.indexOf("|")+1).trim();
+
+        String[] cmd1 = cmds[0].split(" ");
+        String[] cmd2 = cmds[1].split(" ");
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        System.setOut(new PrintStream(outputStream));
+
+
+        cli.executePipe(cmd1, cmd2);
+
+
+        String output = outputStream.toString().stripTrailing();
+        String expected = "file1.txt\nfile2.txt";
+        assertEquals(expected, output, "ls | cat should display the files.");
+    }
+
+    @Test
+    void testPipeWithRedirection() throws IOException {// "ls | cat > file.txt"
+        cli.touch("file.txt");
+        ArrayList<String> lst = cli.ls();
+        String exp = String.join("\n", lst);
+
+        System.out.println(exp);
+
+        Path filePath = testDir.resolve("file.txt");
+        cli.redirect(exp ,filePath.toString() ,false);
+
+        assertTrue(Files.exists(filePath), "The file should exist after redirecting content.");
+
+        String writtenContent = Files.readString(filePath).stripTrailing();
+
+        assertEquals(exp, writtenContent.toString(), "Output of 'ls | cat > file.txt' does not match expected content.");
+    }
+
+    @Test
+    void testLsPipeCatFileRedirect() throws IOException { // ls | cat file1.txt > file2.txt
+        cli.touch("file1.txt");
+        cli.touch("file2.txt");
+
+        ArrayList<String> lst = cli.ls();
+        String exp = String.join("\n", lst);
+
+        Path file1 = testDir.resolve("file1.txt");
+        Path file2 = testDir.resolve("file2.txt");
+
+        cli.redirect(exp ,file1.toString() , false );
+        cli.redirect(exp ,file2.toString() , false );
+
+        String file1Content = Files.readString(file1).stripTrailing();
+        String file2Content = Files.readString(file2).stripTrailing();
+
+        assertEquals(file1Content , file2Content , "Should files same content") ;
+    }
+
+    @Test
+    void testEchoPipeCatRedirect () throws IOException { // echo "string" | cat > file.txt
+        String echoInput = "Mohamed Gamal Ali" ;
+        cli.touch("file.txt");
+
+        Path file = testDir.resolve("file.txt");
+        String exp = String.join("\n", echoInput) ;
+
+        cli.redirect(echoInput ,file.toString() , false );
+        String content = Files.readString(file).stripTrailing();
+        assertEquals(content , exp , "Should file have of string");
+    }
+
+    @Test
+    void testEchoPipeCatFileRedirect() throws IOException {
+        String echoInput = "Mohamed Gamal Ali" ;
+        cli.touch("file1.txt");
+        cli.touch("file2.txt");
+
+        Path file1 = testDir.resolve("file1.txt");
+        Path file2 = testDir.resolve("file2.txt");
+
+        String exp = Files.readString(file1).stripTrailing();
+        cli.redirect(exp , file2.toString() , false );
+        String res = Files.readString(file2).stripTrailing();
+
+        assertEquals(exp , res , "Should file2 same content of file1");
+    }
+
+
+    @Test
+    void testEchoPipeCatFileAppend() throws IOException {
+        String echoInput = "Mohamed Gamal Ali" ;
+        cli.touch("file1.txt");
+        cli.touch("file2.txt");
+
+        Path file1 = testDir.resolve("file1.txt");
+        Path file2 = testDir.resolve("file2.txt");
+
+        String contentfile1 = Files.readString(file1).stripTrailing();
+        cli.redirect(contentfile1 , file2.toString() , true );
+        String contentfile2 = Files.readString(file2).stripTrailing();
+
+        String exp = Files.readString(file1).stripTrailing();
+        exp += Files.readString(file2).stripTrailing();
+
+        assertEquals(exp , contentfile2 , "Should file2 same content of file1");
+    }
+
     //---------------------------------------------------------
     //---------------------------------------------------------
 
