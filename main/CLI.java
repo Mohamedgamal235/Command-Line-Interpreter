@@ -2,6 +2,7 @@ package org.AssignemntOS;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.*;
 import java.io.File;
 import java.util.*;
@@ -11,7 +12,7 @@ public class CLI {
 
     private Path currDir = Paths.get(System.getProperty("user.dir"));
 
-  public void run() {
+    public void run() {
         Scanner sc = new Scanner(System.in);
         System.out.println("Ready to execute your commands. Let's get started");
         while (true){
@@ -27,7 +28,17 @@ public class CLI {
             String command = parts[0];
             String argument = parts.length > 1 ? parts[1] : "";
 
-            if (input.contains(">") && !input.contains(">>")){
+            if (input.contains("|")){
+                String[] cmds = new String[2];
+                cmds[0] = input.substring(0,input.indexOf("|")).trim() ;
+                cmds[1] = input.substring(input.indexOf("|")+1).trim();
+
+                String[] cmdsPart1 = cmds[0].split(" ");
+                String[] cmdsPart2 = cmds[1].split(" ");
+
+                executePipe(cmdsPart1 , cmdsPart2);
+            }
+            else if (input.contains(">") && !input.contains(">>")){
                 String[] str = input.split(" ");
                 String content  = execute(str) ;
                 redirect(content , str[str.length - 1] , false);
@@ -46,7 +57,7 @@ public class CLI {
             else if (command.equalsIgnoreCase("help")){
                 help();
             }
-            else if (command.equals("ls")){
+            else if (command.equalsIgnoreCase("ls")){
                 if (parts.length > 1 && argument.equals("-R"))
                     lsRecursive(currDir.toFile(), "");
                 else if (parts.length > 1 && "-r".equals(parts[1])) {
@@ -133,7 +144,7 @@ public class CLI {
                 System.out.println("Invalid Path");
         }
     }
-
+    
     // -----------------------------------------------
     // -----------------------------------------------
 
@@ -282,8 +293,6 @@ public class CLI {
     }
 
 
-
-
     // -----------------------------------------------
     // -----------------------------------------------
 
@@ -321,6 +330,57 @@ public class CLI {
         return allContent.toString();
     }
 
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void executePipe(String[] cmd1 , String[] cmd2){
+
+        if (cmd1[0].equals("ls") && cmd2[0].equals("cat")){
+            ArrayList<String> items = ls();
+            String res = String.join("\n" , items);
+            if (cmd2.length == 1){  // ls | cat
+                System.out.println(res);
+            }
+            else if (cmd2.length == 3 && cmd2[1].equals(">")){ // ls | cat > file1.txt
+                redirect(res, cmd2[2], false);
+            }
+            else if (cmd2.length == 3 && cmd2[1].equals(">>")){
+                redirect(res, cmd2[2], true);
+            }
+            else if (cmd2.length == 4 && cmd2[2].equals(">")){ // ls | cat file1.txt > file2.txt
+                String content = execute(cmd2);
+                redirect(content, cmd2[3], false);
+            }
+            else if (cmd2.length == 4 && cmd2[2].equals(">>")){
+                String content = execute(cmd2);
+                redirect(content, cmd2[3], true);
+            }
+        }
+        else if (cmd1[0].equals("echo") && cmd2[0].equals("cat")){ // Echo
+            String str = execute(cmd1);
+
+            if (cmd2.length == 1){  // echo "string" | cat
+                System.out.println(str);
+            }
+            else if (cmd2.length == 3 && cmd2[1].equals(">")){ // echo "stirng" | cat > file1.txt
+                redirect(str, cmd2[2] , false);
+            }
+            else if (cmd2.length == 3 && cmd2[1].equals(">>")){
+                redirect(str, cmd2[2], true);
+            }
+            else if (cmd2.length == 4 && cmd2[2].equals(">")){ // echo "stirng" | cat file1.txt > file2.txt
+                String content = execute(cmd2);
+                redirect(content, cmd2[3], false);
+            }
+            else if (cmd2.length == 4 && cmd2[2].equals(">>")){
+                String content = execute(cmd2);
+                redirect(content, cmd2[3], true);
+            }
+        }
+        else
+            System.out.println("with pipe use only (ls , cat , echo , > , >>).");
+    }
 
     // -----------------------------------------------
     // -----------------------------------------------
@@ -463,7 +523,7 @@ public class CLI {
     // -----------------------------------------------
     // -----------------------------------------------
 
-     public List<String> lsReverse() {
+    public List<String> lsReverse() {
         List<String> files = new ArrayList<>();
         if (Files.isDirectory(currDir)) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(currDir)) {
@@ -478,7 +538,7 @@ public class CLI {
             System.out.println("Current path not a directory");
         }
         return files;
-}
+    }
 
     // -----------------------------------------------
     // -----------------------------------------------
