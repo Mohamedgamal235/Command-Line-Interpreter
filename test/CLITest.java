@@ -234,7 +234,7 @@ public class CLITest {
     //---------------------------------------------------------
     //---------------------------------------------------------
 
-   @Test
+    @Test
     void testLsReverse() throws IOException {
         cli.touch("file3.txt");
         cli.touch("file4.txt");
@@ -243,6 +243,7 @@ public class CLITest {
         List<String> outputFiles = cli.lsReverse();
         assertEquals(expectedFiles, outputFiles, "Files should be listed in reverse alphabetical order.");
     }
+
     //---------------------------------------------------------
     //---------------------------------------------------------
 
