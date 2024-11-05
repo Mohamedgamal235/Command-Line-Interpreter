@@ -41,7 +41,7 @@ public class CLI {
             else if (input.contains(">") && !input.contains(">>")){
                 String[] str = input.split(" ");
                 String content  = execute(str) ;
-                redirect(content , str[str.length - 1] , false);
+                redirect(content , str[str.length - 1], false);
             }
             else if (input.contains(">>")){
                 String[] str = input.split(" ");
@@ -144,7 +144,7 @@ public class CLI {
                 System.out.println("Invalid Path");
         }
     }
-    
+
     // -----------------------------------------------
     // -----------------------------------------------
 
@@ -204,7 +204,7 @@ public class CLI {
                         Files.move(src , src.resolveSibling(target.toString())); // rename
                     }
                     else if (Files.isDirectory(target)){
-                        Files.move(src , src.resolveSibling(target.toString()));
+                        Files.move(src, target.resolve(src.getFileName()), StandardCopyOption.REPLACE_EXISTING);
                     }
                     else {
                         Files.move(src, target, StandardCopyOption.REPLACE_EXISTING);
@@ -237,47 +237,37 @@ public class CLI {
     // -----------------------------------------------
 
     public void rm(String[] parts) {
-        if (parts.length == 1) { // Case: rm filename
-            Path rmTarget = new File(parts[0]).toPath();
-            if (rmTarget.toFile().isDirectory()) {
-                System.out.println("can't remove '" + parts[0] + "', it is a directory.");
-            } else if (rmTarget.toFile().exists()) {
+        int i = 0;
+        boolean recursive = false;
+
+        if (parts.length > 0 && (parts[0].equals("-f") || parts[0].equals("-r"))) {
+            if (parts[0].equals("-r"))
+                recursive = true;
+            i = 1;
+        }
+
+        for (; i < parts.length; i++) {
+            Path rmTarget = new File(parts[i]).toPath();
+
+            if (recursive && rmTarget.toFile().isDirectory()) {
                 try {
-                    Files.delete(rmTarget);
-                    System.out.println("File '" + rmTarget + "' removed successfully.");
+                    deleteDirectory(rmTarget);
                 } catch (IOException e) {
-                    System.out.println("IO error occurred.");
+                    System.out.println("An I/O error occurred while deleting the directory.");
                 }
             } else {
-                System.out.println("File '" + parts[0] + "' does not exist.");
-            }
-        } else if (parts.length == 2) { // Cases: rm -r directory or rm -f filename
-            Path rmTarget = new File(parts[1]).toPath(); // Change from parts[2] to parts[1]
-            switch (parts[0]) {
-                case "-r":
+                if (rmTarget.toFile().isDirectory()) {
+                    System.out.println("Can't remove '" + parts[i] + "', it is a directory.");
+                } else if (rmTarget.toFile().exists() ) {
                     try {
-                        deleteDirectory(rmTarget);
-                        System.out.println("Directory '" + rmTarget + "' removed successfully.");
+                        Files.deleteIfExists(rmTarget);
                     } catch (IOException e) {
-                        System.out.println("An I/O error occurred while deleting the directory.");
+                        System.out.println("An I/O error occurred while deleting the file.");
                     }
-                    break;
-
-                case "-f":
-                    try {
-                        Files.delete(rmTarget);
-                        System.out.println("File '" + rmTarget + "' removed successfully.");
-                    } catch (IOException e) {
-                        System.out.println("An I/O error occurred.");
-                    }
-                    break;
-
-                default:
-                    System.out.println("Unknown option '" + parts[0] + "'. Use '-r' for directories or '-f' for files.");
-                    break;
+                } else {
+                    System.out.println("File '" + parts[i] + "' does not exist.");
+                }
             }
-        } else {
-            System.out.println("Invalid rm command usage.");
         }
     }
 
