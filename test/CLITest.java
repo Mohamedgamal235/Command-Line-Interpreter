@@ -1,7 +1,6 @@
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static java.nio.file.Files.readString;
 import static org.junit.jupiter.api.Assertions.*;
 import org.AssignemntOS.CLI;
 import java.io.IOException;
@@ -10,13 +9,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Arrays;
+
 public class CLITest {
 
     private CLI cli;
     private Path testDir;
 
 
-@BeforeEach
+    @BeforeEach
     void setUp() throws IOException {
         cli = new CLI();
         testDir = Paths.get(System.getProperty("java.io.tmpdir"), "cli_test");
@@ -47,7 +47,7 @@ public class CLITest {
     void pwdTest() {
         String currDir = cli.pwd();
         assertEquals(testDir.toString(), currDir , "pwd should return the current directory.");
-    }    
+    }
 //---------------------------------------------------------
     //---------------------------------------------------------
 
