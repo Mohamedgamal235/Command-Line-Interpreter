@@ -46,12 +46,11 @@ public class CLI {
             else if (command.equalsIgnoreCase("help")){
                 help();
             }
-             else if (command.equals("ls")){
-                if (parts.length > 1 && argument.equals("-R"))
+            else if (command.equalsIgnoreCase("ls")){
+                if (parts.length > 1 && argument.equals("-r"))
                     lsRecursive(currDir.toFile(), "");
-                else if (parts.length > 1 && "-r".equals(parts[1])) {
-                    System.out.println(String.join("\n", lsReverse()));
-                }
+                else if (parts.length>1 && "-R".equals(parts[1]))
+                    lsReverse();
                 else if (parts.length == 1){
                     ArrayList<String> files = ls();
                     System.out.println(String.join("\n" , files));
@@ -112,58 +111,258 @@ public class CLI {
     // -------------------------- Commands --------------------------------------
     // --------------------------------------------------------------------------
 
-    // Ayaa
-public String pwd() {
-	return currDir.toString();
-}
+    public String pwd(){
+        return currDir.toString() ;
+    }
 
-// -----------------------------------------------
-// -----------------------------------------------
+    // -----------------------------------------------
+    // -----------------------------------------------
 
-public void cd(String path) {
-	path = path.trim();
-	if (path.equals("..")) {
-		currDir = currDir.getParent();
-		if (currDir == null)
-			currDir = Paths.get(System.getProperty("user.dir"));
-	}
-	else {
-		Path newDir = currDir.resolve(path);
-		if (Files.exists(newDir) && Files.isDirectory(newDir))
-			currDir = newDir;
-		else
-			System.out.println("Invalid Path");
-	}
-}
-// -----------------------------------------------
-	// -----------------------------------------------
+    public void cd(String path){
+        path = path.trim();
+        if (path.equals("..")){
+            currDir = currDir.getParent();
+            if (currDir == null)
+                currDir = Paths.get(System.getProperty("user.dir"));
+        }
+        else {
+            Path newDir = currDir.resolve(path);
+            if (Files.exists(newDir) && Files.isDirectory(newDir))
+                currDir = newDir ;
+            else
+                System.out.println("Invalid Path");
+        }
+    }
 
-public void help() {
-	System.out.println("cd          : Displays the name of or changes the current directory.");
-	System.out.println("pwd         : Prints the working directory");
-	System.out.println("ls          : Lists the contents (files & directories) of the current directory sorted alphabetically.");
-	System.out.println("ls -r       : Print Lists the contents (files & directories) on reverse order.");
-	System.out.println("ls -a       : display all contents even entries starting with (a).");
-	System.out.println("mkdir       : Creates a directory with each given name.");
-	System.out.println("rmdir       : Removes each given directory (only if it is empty).");
-	System.out.println("touch       : Creates a file with each given name.");
-	System.out.println("mv          : Moves one or more files/directories to a directory.");
-	System.out.println("rm          : Removes one or more files/directories from the current directory.");
-	System.out.println("cat         : Concatenates the content of files and prints it.");
-	System.out.println(">           : Redirects the output of the first command to be written to a file.");
-	System.out.println(">>          : Like > but appends to file if it exists.");
-	System.out.println("|           : Pipes | redirect the output of the previous command as in input to another command.");
-}
+    // -----------------------------------------------
+    // -----------------------------------------------
 
-}
+    public ArrayList<String> ls(){
+        ArrayList<String> files = new ArrayList<>();
+        if (Files.isDirectory(currDir)){
+            try{
+                DirectoryStream<Path> streamDir = Files.newDirectoryStream(currDir);
+                for (Path file : streamDir)
+                    files.add(file.getFileName().toString());
+
+                Collections.sort(files);
+            }
+            catch (IOException e){
+                System.out.println(e.getMessage());
+            }
+        }
+        else
+            System.out.println("Current path not directory");
+
+        return files;
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void mv(String str){
+        List<String> files = new ArrayList<>(Arrays.asList(str.split(" ")));
+
+        Path target = currDir.resolve(files.get(files.size() - 1)); // last file or dir
+        List<Path> source = new ArrayList<>(); // list if multiple sorces
+        for (int i = 0 ; i < files.size() - 1 ; i++)
+            source.add(currDir.resolve(files.get(i)));
+
+        try{
+            if (source.size() == 1){
+
+                Path src = source.get(0);
+
+                if (!Files.exists(src)) {
+                    throw new FileNotFoundException(src.getFileName() + " -> Not Found");
+                }
+
+                if (Files.isDirectory(src)){
+                    if (Files.notExists(target)){
+                        Files.move(src , src.resolveSibling(target.toString()));
+                    }
+                    else if (Files.isDirectory(target)){
+                        Files.move(src, target.resolve(src.getFileName()) , StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    else {
+                        throw new FileNotFoundException("Cannot overwrite non-directory " + src.toFile().getName() + " with directory " + target.toFile().getName());
+                    }
+                }
+                else if (!Files.isDirectory(src)){
+                    if (Files.notExists(target)){
+                        Files.move(src , src.resolveSibling(target.toString())); // rename
+                    }
+                    else if (Files.isDirectory(target)){
+                        Files.move(src , src.resolveSibling(target.toString()));
+                    }
+                    else {
+                        Files.move(src, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+            else { //  multiple sources
+                if (Files.notExists(target) || !Files.isDirectory(target)) {
+                    throw new IOException("Target must be an existing directory for multiple sources");
+                }
+
+                for (Path file : source){
+                    if (Files.notExists(file)) {
+                        throw new FileNotFoundException("Source file/directory does not exist: " + file.toFile().getName());
+                    }
+                    else
+                        Files.move(file, target.resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+        catch (FileNotFoundException e){
+            System.out.println(e.getMessage());
+        }
+        catch (IOException e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    public void rm(String[] parts) {
+        if (parts.length == 1) { // Case: rm filename
+            Path rmTarget = new File(parts[0]).toPath();
+            if (rmTarget.toFile().isDirectory()) {
+                System.out.println("can't remove '" + parts[0] + "', it is a directory.");
+            } else if (rmTarget.toFile().exists()) {
+                try {
+                    Files.delete(rmTarget);
+                    System.out.println("File '" + rmTarget + "' removed successfully.");
+                } catch (IOException e) {
+                    System.out.println("IO error occurred.");
+                }
+            } else {
+                System.out.println("File '" + parts[0] + "' does not exist.");
+            }
+        } else if (parts.length == 2) { // Cases: rm -r directory or rm -f filename
+            Path rmTarget = new File(parts[1]).toPath(); // Change from parts[2] to parts[1]
+            switch (parts[0]) {
+                case "-r":
+                    try {
+                        deleteDirectory(rmTarget);
+                        System.out.println("Directory '" + rmTarget + "' removed successfully.");
+                    } catch (IOException e) {
+                        System.out.println("An I/O error occurred while deleting the directory.");
+                    }
+                    break;
+
+                case "-f":
+                    try {
+                        Files.delete(rmTarget);
+                        System.out.println("File '" + rmTarget + "' removed successfully.");
+                    } catch (IOException e) {
+                        System.out.println("An I/O error occurred.");
+                    }
+                    break;
+
+                default:
+                    System.out.println("Unknown option '" + parts[0] + "'. Use '-r' for directories or '-f' for files.");
+                    break;
+            }
+        } else {
+            System.out.println("Invalid rm command usage.");
+        }
+    }
+
+    private static void deleteDirectory(Path directory) throws IOException {
+        if (Files.isDirectory(directory)) {
+            try (var entries = Files.newDirectoryStream(directory)) {
+                for (Path entry : entries) {
+                    deleteDirectory(entry);
+                }
+            }
+        }
+        Files.delete(directory);
+    }
+
 
 
 
     // -----------------------------------------------
     // -----------------------------------------------
-    
-    // Marwa
 
+    public String cat(String[] files) {
+        StringBuilder allContent = new StringBuilder(); // to append
+
+        for (int i = 0; i < files.length; i++) {
+            Path catTarget = new File(files[i]).toPath();
+
+            if (catTarget.toFile().isDirectory()) {
+                System.out.println("can't cat '" + files[i] + "', it is a directory.");
+                continue;
+            }
+            else if (catTarget.toFile().exists()) {
+                File file = new File(files[i]);
+                try (Scanner fileScanner = new Scanner(file)) {
+                    while (fileScanner.hasNextLine()) {
+                        allContent.append(fileScanner.nextLine());
+                        if (fileScanner.hasNextLine()) {
+                            allContent.append("\n");
+                        }
+                    }
+                } catch (IOException e) {
+                    System.out.println("An I/O error occurred while reading '" + files[i] + "'.");
+                }
+
+                if (i < files.length - 1) {
+                    allContent.append("\n");
+                }
+            } else {
+                System.out.println("File '" + files[i] + "' does not exist.");
+            }
+        }
+
+        return allContent.toString();
+    }
+
+
+    // -----------------------------------------------
+    // -----------------------------------------------
+
+    private String execute(String[] str){
+
+        String command = str[0].trim();
+        String content  = "" ;
+
+        if (command.equals("ls")) {
+            ArrayList<String> files = ls();
+            content = String.join("\n" , files);
+        }
+        else if (command.equals("echo")){
+            StringBuilder s = new StringBuilder();
+            for (int i = 1 ; i < str.length ; i++){
+                if (str[i].equals(">"))
+                    break;
+                s.append(str[i]).append(" ");
+            }
+            content = s.toString();
+        }
+        else if (command.equals("cat"))
+            content = cat(str[1].split(" "));
+
+        return content;
+    }
+
+    public void redirect(String content , String file , boolean append){
+        try{
+            FileWriter w = new FileWriter(file , append);
+            w.write(content);
+            w.write("\n");
+            w.close();
+        }
+        catch (IOException e){
+            System.out.println("Error writing ti file : " + e.getMessage());
+        }
+    }
+
+    // -----------------------------------------------
+    // -----------------------------------------------
 
     public void mkdir(String dirNames){
         String[] dirs = dirNames.split(" ");
@@ -264,160 +463,44 @@ public void help() {
     // -----------------------------------------------
     // -----------------------------------------------
 
-
-    public List<String> lsReverse() {
-        List<String> files = new ArrayList<>();
+    public void lsReverse() {
+        ArrayList<String> files = new ArrayList<>();
         if (Files.isDirectory(currDir)) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(currDir)) {
                 for (Path file : stream) {
                     files.add(file.getFileName().toString());
                 }
-                files.sort(Collections.reverseOrder());
+                Collections.sort(files, Collections.reverseOrder());
+                for (String file : files) {
+                    System.out.println(file);
+                }
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
-        } else {
+        }
+        else {
             System.out.println("Current path not a directory");
         }
-        return files;
-    }
-    // -----------------------------------------------
-    // -----------------------------------------------
-
-    // Mostafaa
-
-
-
-    // -----------------------------------------------
-    // -----------------------------------------------
-
-    // Mohamed 
-
-
-    public void mv(String str){
-        List<String> files = new ArrayList<>(Arrays.asList(str.split(" ")));
-
-        Path target = currDir.resolve(files.get(files.size() - 1)); // last file or dir
-        List<Path> source = new ArrayList<>(); // list if multiple sorces
-        for (int i = 0 ; i < files.size() - 1 ; i++)
-            source.add(currDir.resolve(files.get(i)));
-
-        try{
-            if (source.size() == 1){
-
-                Path src = source.get(0);
-
-                if (!Files.exists(src)) {
-                    throw new FileNotFoundException(src.getFileName() + " -> Not Found");
-                }
-
-                if (Files.isDirectory(src)){
-                    if (Files.notExists(target)){
-                        Files.move(src , src.resolveSibling(target.toString()));
-                    }
-                    else if (Files.isDirectory(target)){
-                        Files.move(src, target.resolve(src.getFileName()) , StandardCopyOption.REPLACE_EXISTING);
-                    }
-                    else {
-                        throw new FileNotFoundException("Cannot overwrite non-directory " + src.toFile().getName() + " with directory " + target.toFile().getName());
-                    }
-                }
-                else if (!Files.isDirectory(src)){
-                    if (Files.notExists(target)){
-                        Files.move(src , src.resolveSibling(target.toString())); // rename
-                    }
-                    else if (Files.isDirectory(target)){
-                        Files.move(src , src.resolveSibling(target.toString()));
-                    }
-                    else {
-                        Files.move(src, target, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                }
-            }
-            else { //  multiple sources
-                if (Files.notExists(target) || !Files.isDirectory(target)) {
-                    throw new IOException("Target must be an existing directory for multiple sources");
-                }
-
-                for (Path file : source){
-                    if (Files.notExists(file)) {
-                        throw new FileNotFoundException("Source file/directory does not exist: " + file.toFile().getName());
-                    }
-                    else
-                        Files.move(file, target.resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
-                }
-            }
-        }
-        catch (FileNotFoundException e){
-            System.out.println(e.getMessage());
-        }
-        catch (IOException e){
-            System.out.println(e.getMessage());
-        }
     }
 
     // -----------------------------------------------
     // -----------------------------------------------
 
-    private String execute(String[] str){
-
-        String command = str[0].trim();
-        String content  = "" ;
-
-        if (command.equals("ls")) {
-            ArrayList<String> files = ls();
-            content = String.join("\n" , files);
-        }
-        else if (command.equals("echo")){
-            StringBuilder s = new StringBuilder();
-            for (int i = 1 ; i < str.length ; i++){
-                if (str[i].equals(">"))
-                    break;
-                s.append(str[i]).append(" ");
-            }
-            content = s.toString();
-        }
-        else if (command.equals("cat"))
-            content = cat(str[1].split(" "));
-
-        return content;
+    public void help(){
+        System.out.println("cd          : Displays the name of or changes the current directory.");
+        System.out.println("pwd         : Prints the working directory");
+        System.out.println("ls          : Lists the contents (files & directories) of the current directory sorted alphabetically.");
+        System.out.println("ls -r       : Print Lists the contents (files & directories) on reverse order." );
+        System.out.println("ls -a       : display all contents even entries starting with (a).");
+        System.out.println("mkdir       : Creates a directory with each given name.");
+        System.out.println("rmdir       : Removes each given directory (only if it is empty).");
+        System.out.println("touch       : Creates a file with each given name.");
+        System.out.println("mv          : Moves one or more files/directories to a directory.");
+        System.out.println("rm          : Removes one or more files/directories from the current directory.");
+        System.out.println("cat         : Concatenates the content of files and prints it.");
+        System.out.println(">           : Redirects the output of the first command to be written to a file.");
+        System.out.println(">>          : Like > but appends to file if it exists.");
+        System.out.println("|           : Pipes | redirect the output of the previous command as in input to another command.");
     }
-
-    public void redirect(String content , String file , boolean append){  // for > and >> 
-        try{
-            FileWriter w = new FileWriter(file , append);
-            w.write(content);
-            w.write("\n");
-            w.close();
-        }
-        catch (IOException e){
-            System.out.println("Error writing ti file : " + e.getMessage());
-        }
-    }
-
-    // -----------------------------------------------
-    // -----------------------------------------------
-
-    public ArrayList<String> ls(){
-        ArrayList<String> files = new ArrayList<>();
-        if (Files.isDirectory(currDir)){
-            try{
-                DirectoryStream<Path> streamDir = Files.newDirectoryStream(currDir);
-                for (Path file : streamDir)
-                    files.add(file.getFileName().toString());
-
-                Collections.sort(files);
-            }
-            catch (IOException e){
-                System.out.println(e.getMessage());
-            }
-        }
-        else
-            System.out.println("Current path not directory");
-
-        return files;
-    }
-
-
 
 }
