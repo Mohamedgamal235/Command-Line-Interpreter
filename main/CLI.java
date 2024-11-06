@@ -325,6 +325,8 @@ public class CLI {
     // -----------------------------------------------
 
     public void executePipe(String[] cmd1 , String[] cmd2){
+         // ls | cat
+        // echo | cat
 
         if (cmd1[0].equals("ls") && cmd2[0].equals("cat")){
             ArrayList<String> items = ls();
